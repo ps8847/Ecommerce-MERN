@@ -3,7 +3,7 @@
 This is a MERN (MongoDB, Express.js, React.js, Node.js) stack E-commerce application with features like product listing, product details, cart functionality, user authentication, and payment processing.
 
 # Live Link 
-You can access the live version [here](https://ecommerce-mern-woad.vercel.app/auth/login).
+You can access the live version [here](https://ecommerce-mern-woad.vercel.app).
 
 ## Installation
 
