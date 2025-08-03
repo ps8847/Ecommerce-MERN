@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import UserCartItemsContent from "@/components/shopping-view/cart-items-content";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { createNewOrder } from "@/store/shop/order-slice";
+import { capturePayment, createNewOrder } from "@/store/shop/order-slice";
 import { Navigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -32,7 +32,7 @@ function ShoppingCheckout() {
         )
       : 0;
 
-  function handleInitiatePaypalPayment() {
+  async function handleInitiatePayment() {
     if (cartItems.length === 0) {
       toast({
         title: "Your cart is empty. Please add items to proceed",
@@ -72,7 +72,7 @@ function ShoppingCheckout() {
         notes: currentSelectedAddress?.notes,
       },
       orderStatus: "pending",
-      paymentMethod: "paypal",
+      paymentMethod: "dummy",
       paymentStatus: "pending",
       totalAmount: totalCartAmount,
       orderDate: new Date(),
@@ -81,14 +81,33 @@ function ShoppingCheckout() {
       payerId: "",
     };
 
-    dispatch(createNewOrder(orderData)).then((data) => {
-      console.log(data, "sangam");
-      if (data?.payload?.success) {
-        setIsPaymemntStart(true);
+ try {
+      const { payload } = await dispatch(createNewOrder(orderData));
+
+      console.log("paylaod her eis : " , payload);
+      
+      if (payload?.success) {
+        const orderId = payload?.orderId;
+        sessionStorage.setItem("currentOrderId", JSON.stringify(orderId));
+
+        // Dummy capture
+        const captureResponse = await dispatch(
+          capturePayment({ orderId }) // No paymentId, payerId needed for dummy
+        );
+
+        if (captureResponse?.payload?.success) {
+          sessionStorage.removeItem("currentOrderId");
+          window.location.href = "/shop/payment-success";
+        } else {
+          setIsPaymemntStart(false);
+        }
       } else {
         setIsPaymemntStart(false);
       }
-    });
+    } catch (error) {
+      console.error(error);
+      setIsPaymemntStart(false);
+    }
   }
 
   if (approvalURL) {
@@ -118,10 +137,10 @@ function ShoppingCheckout() {
             </div>
           </div>
           <div className="mt-4 w-full">
-            <Button onClick={handleInitiatePaypalPayment} className="w-full">
+            <Button onClick={handleInitiatePayment} className="w-full">
               {isPaymentStart
-                ? "Processing Paypal Payment..."
-                : "Checkout with Paypal"}
+                ? "Processing Payment..."
+                : "Checkout"}
             </Button>
           </div>
         </div>

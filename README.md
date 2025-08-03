@@ -35,9 +35,6 @@ To run this project locally, follow these steps:
 
     ```bash
     DB_LINK=
-    PAYPAL_MODE=
-    PAYPAL_CLIENT_ID=
-    PAYPAL_CLIENT_SECRET=
     CLOUDINARY_NAME=
     CLOUDINARY_API_KEY=
     CLOUDINARY_API_SECRET=
@@ -68,8 +65,7 @@ Cloudinary
 Node.js,
 Express.js,
 MongoDB,
-Cloudinary (for image management),
-PayPal (for payment processing),
+Cloudinary (for image management)
 
 # Features
 
