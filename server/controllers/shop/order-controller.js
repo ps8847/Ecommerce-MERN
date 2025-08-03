@@ -1,162 +1,108 @@
-const paypal = require("../../helpers/paypal");
 const Order = require("../../models/Order");
 const Cart = require("../../models/Cart");
 const Product = require("../../models/Product");
 
+// Create a dummy order without using any payment gateway
 const createOrder = async (req, res) => {
   try {
     const {
       userId,
       cartItems,
       addressInfo,
-      orderStatus,
-      paymentMethod,
-      paymentStatus,
+      orderStatus = "pending",
+      paymentMethod = "dummy",
       totalAmount,
-      orderDate,
-      orderUpdateDate,
-      paymentId,
-      payerId,
       cartId,
     } = req.body;
 
-    const create_payment_json = {
-      intent: "sale",
-      payer: {
-        payment_method: "paypal",
-      },
-      redirect_urls: {
-        return_url: "https://ecommerce-mern-9nd0.onrender.com/shop/paypal-return",
-        cancel_url: "https://ecommerce-mern-9nd0.onrender.com/shop/paypal-cancel",
-      },
-      transactions: [
-        {
-          item_list: {
-            items: cartItems.map((item) => ({
-              name: item.title,
-              sku: item.productId,
-              price: item.price.toFixed(2),
-              currency: "USD",
-              quantity: item.quantity,
-            })),
-          },
-          amount: {
-            currency: "USD",
-            total: totalAmount.toFixed(2),
-          },
-          description: "description",
-        },
-      ],
-    };
+    const newOrder = new Order({
+      userId,
+      cartId,
+      cartItems,
+      addressInfo,
+      orderStatus,
+      paymentMethod,
+      paymentStatus: "paid", // Dummy: mark it as paid
+      totalAmount,
+      orderDate: new Date(),
+      orderUpdateDate: new Date(),
+      paymentId: "dummy_payment_id_123", // Dummy values
+      payerId: "dummy_payer_id_456",
+    });
 
-    paypal.payment.create(create_payment_json, async (error, paymentInfo) => {
-      if (error) {
-        console.log(error);
+    await newOrder.save();
 
-        return res.status(500).json({
-          success: false,
-          message: "Error while creating paypal payment",
-        });
-      } else {
-        const newlyCreatedOrder = new Order({
-          userId,
-          cartId,
-          cartItems,
-          addressInfo,
-          orderStatus,
-          paymentMethod,
-          paymentStatus,
-          totalAmount,
-          orderDate,
-          orderUpdateDate,
-          paymentId,
-          payerId,
-        });
-
-        await newlyCreatedOrder.save();
-
-        const approvalURL = paymentInfo.links.find(
-          (link) => link.rel === "approval_url"
-        ).href;
-
-        res.status(201).json({
-          success: true,
-          approvalURL,
-          orderId: newlyCreatedOrder._id,
-        });
-      }
+    res.status(201).json({
+      success: true,
+      message: "Order created successfully with dummy payment",
+      orderId: newOrder._id,
     });
   } catch (e) {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occurred while creating the order",
     });
   }
 };
 
+// Confirm the dummy payment and update stock
 const capturePayment = async (req, res) => {
   try {
-    const { paymentId, payerId, orderId } = req.body;
+    const { orderId } = req.body;
 
-    let order = await Order.findById(orderId);
-
+    const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order can not be found",
+        message: "Order not found",
       });
     }
 
     order.paymentStatus = "paid";
     order.orderStatus = "confirmed";
-    order.paymentId = paymentId;
-    order.payerId = payerId;
 
-    for (let item of order.cartItems) {
-      let product = await Product.findById(item.productId);
+    for (const item of order.cartItems) {
+      const product = await Product.findById(item.productId);
 
       if (!product) {
         return res.status(404).json({
           success: false,
-          message: `Not enough stock for this product ${product.title}`,
+          message: `Product not found: ${item.productId}`,
         });
       }
 
       product.totalStock -= item.quantity;
-
       await product.save();
     }
 
-    const getCartId = order.cartId;
-    await Cart.findByIdAndDelete(getCartId);
-
+    await Cart.findByIdAndDelete(order.cartId);
     await order.save();
 
     res.status(200).json({
       success: true,
-      message: "Order confirmed",
+      message: "Dummy payment captured and order confirmed",
       data: order,
     });
   } catch (e) {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occurred while capturing dummy payment",
     });
   }
 };
 
+// Fetch all orders for a user
 const getAllOrdersByUser = async (req, res) => {
   try {
     const { userId } = req.params;
-
     const orders = await Order.find({ userId });
 
     if (!orders.length) {
       return res.status(404).json({
         success: false,
-        message: "No orders found!",
+        message: "No orders found",
       });
     }
 
@@ -168,21 +114,21 @@ const getAllOrdersByUser = async (req, res) => {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occurred while fetching orders",
     });
   }
 };
 
+// Get details of a single order
 const getOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
-
     const order = await Order.findById(id);
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order not found!",
+        message: "Order not found",
       });
     }
 
@@ -194,7 +140,7 @@ const getOrderDetails = async (req, res) => {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occurred while fetching order details",
     });
   }
 };

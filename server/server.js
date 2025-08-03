@@ -30,7 +30,8 @@ const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: "https://ecommerce-mern-woad.vercel.app",
+    // origin: "https://ecommerce-mern-woad.vercel.app",
+    origin: "http://localhost:5173",
     methods: ["GET", "POST", "DELETE", "PUT"],
     allowedHeaders: [
       "Content-Type",
